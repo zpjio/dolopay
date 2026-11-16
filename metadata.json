@@ -1,0 +1,6 @@
+{
+  "name": "DoloPay (独行付) · 个人收款码免签收款与核销系统",
+  "description": "DoloPay (独行付) 专业级个人收款码（支付宝/微信/云闪付）免签约收款系统，内置动态金额防冲突锁、固码池匹配、App监听Webhook签名核销与DoloPay快捷审批台。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
