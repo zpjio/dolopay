@@ -230,6 +230,12 @@ Once settled, DoloPay sends a `POST` request to your `notifyUrl` (retrying on fa
 
 ---
 
-## 6. License
+## 6. License & Compliance
 
-Licensed under the [Apache-2.0 License](./LICENSE).
+This project is licensed under the [**Apache License 2.0**](./LICENSE). When using, modifying, or redistributing this software, please comply with the following terms:
+
+- **License & Attribution Files**: The repository root provides the full [`LICENSE`](./LICENSE) text and [`NOTICE`](./NOTICE) attribution file. All core TypeScript source files include `SPDX-License-Identifier: Apache-2.0` headers, and `package.json` declares `"license": "Apache-2.0"`.
+- **Permissions & Conditions**: Commercial use, modification, distribution, and private/proprietary derivative works are permitted provided that you retain copyright notices, include a copy of [`LICENSE`](./LICENSE) and [`NOTICE`](./NOTICE), and document prominent change notices in any modified files.
+- **Third-Party Software & Trademarks**: Open-source dependencies (React, Express, Vite, Tailwind CSS, Lucide, etc.) remain governed by their respective licenses (primarily MIT, ISC, and Apache-2.0). Trademarks such as Alipay, WeChat Pay, UnionPay, Stripe, Feishu, Bark, and Telegram belong to their respective owners and are referenced solely for protocol compatibility and routing.
+- **Disclaimer**: Provided on an "AS IS" basis without warranties or conditions of any kind. Operators are solely responsible for complying with local laws and applicable payment-provider terms of service.
+
