@@ -13,7 +13,7 @@
 [![Protocols](https://img.shields.io/badge/Protocols-REST%20%7C%20EPay%20%7C%20Stripe-0F172A.svg)](#四-外部系统接入指南-open-api--插件配置)
 
 **无需企业营业执照 · 0% 通道手续费 · 资金 100% 实时直达个人支付宝 / 微信支付 / 云闪付账户**  
-内置整数分位原子防冲突锁、高频固码池优先匹配、App 监听与邮件/飞书双轨核销，零代码兼容彩虹易支付与任意外部系统。
+内置整数分位原子防冲突锁、高频固码池优先匹配、App 监听与邮件/飞书双轨核销，零代码兼容易支付通用协议与任意外部系统。
 
 </div>
 
@@ -55,7 +55,7 @@
 │                        外部业务系统 (Downstream Applications)                       │
 │   [自研 SaaS / 独立站]         [独角数卡 / 鲸发卡 / V2Board]       [WHMCS / 国际订阅]   │
 +-------------+------------------------------+------------------------------+-------+
-              │ 1. DoloPay REST v1           │ 2. 彩虹易支付兼容协议 (EPay)    │ 3. Stripe Webhook
+              │ 1. DoloPay REST v1           │ 2. 易支付通用协议 (EPay Compat) │ 3. Stripe Webhook
               v                              v                              v
 +-----------------------------------------------------------------------------------+
 │                          DoloPay Open Gateway (server.ts)                         │
@@ -94,7 +94,7 @@
 
 ### 4. 三大工业级开放协议无缝集成
 - **DoloPay REST Open API v1**：标准 JSON + ASCII 字典序签名 + `Idempotency-Key` 幂等头。
-- **彩虹易支付兼容协议 (`EPay Compat`)**：零代码直接对接 **独角数卡、鲸发卡、V2Board、SSPanel、WHMCS、WordPress/WooCommerce** 等任何支持易支付插件的开源系统。
+- **易支付通用协议 (`EPay Compat`)**：零代码直接对接 **独角数卡、鲸发卡、V2Board、SSPanel、WHMCS、WordPress/WooCommerce** 等任何支持标准 EPay 插件的开源系统。
 - **Stripe 风格签名事件流 (`Stripe Webhook`)**：采用 `X-DoloPay-Signature: t=...,v1=...` 时间戳签名头。
 
 ---
@@ -129,9 +129,9 @@ npx --yes tsx --test src/core/dolopayEngine.test.ts
 
 ## 四、 外部系统接入指南 (Open API & 插件配置)
 
-### 方式 A：零代码对接现成开源系统（彩虹易支付兼容模式）
+### 方式 A：零代码对接现成开源系统（易支付通用协议兼容模式）
 
-在【开放平台与风控】中新建一个协议为 `彩虹易支付兼容协议 (EPay)` 的应用，然后将以下三项填入您的发卡网（如独角数卡）或面板后台：
+在【开放平台与风控】中新建一个协议为 `易支付通用协议 (EPay Compat)` 的应用，然后将以下三项填入您的发卡网（如独角数卡）或面板后台：
 
 | 配置项 | 填写内容 |
 | :--- | :--- |
@@ -208,7 +208,7 @@ npx --yes tsx --test src/core/dolopayEngine.test.ts
 
 1. **标准密码学双模引擎 + 常量时间比对 (`Constant-Time Comparison`)**：
    - `DOLOPAY_REST_V1`、`STRIPE_WEBHOOK` 及移动端通知上报全面采用符合 **RFC 2104 标准的 `HMAC-SHA256`**；
-   - `EPAY_COMPAT`（彩虹易支付协议）采用符合 **RFC 1321 标准的 `MD5`**，零代码兼容独角数卡、鲸发卡、V2Board 等现成插件；
+   - `EPAY_COMPAT`（易支付通用协议）采用符合 **RFC 1321 标准的 `MD5`**，零代码兼容独角数卡、鲸发卡、V2Board 等现成插件；
    - 所有签名比对强制执行 `constantTimeEqual` 逐字节常量时间异或校验，彻底杜绝时序侧信道攻击（Timing Side-Channel Attack）。
 2. **Webhook `±300s` 时间戳防重放窗口 + 设备通知唯一指纹幂等**：
    - 移动端上报 `/api/v1/webhook/notify` 时，网关首先校验 `|now - timestamp| <= 300s`，过期重放报文直接以 `TIMESTAMP_EXPIRED` 拦截并记入安全审计日志；同时通过 `deviceTxId` 幂等校验防止同一笔通知重复入账。

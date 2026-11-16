@@ -26,7 +26,7 @@ export type WebhookDeliveryStatus = 'IDLE' | 'DELIVERED' | 'FAILED_RETRYING' | '
 
 export type IntegrationProtocol =
   | 'DOLOPAY_REST_V1'// DoloPay 标准 JSON Open API (HMAC-SHA256 签名 + 幂等头)
-  | 'EPAY_COMPAT'    // 彩虹易支付兼容协议 (pid + key 字典序标准 MD5 签名，适配发卡网/面板)
+  | 'EPAY_COMPAT'    // 易支付通用协议 (pid + key 字典序标准 MD5 签名，适配标准 EPay 插件)
   | 'STRIPE_WEBHOOK';// Stripe 风格 Webhook (X-DoloPay-Signature: t=...,v1=... HMAC-SHA256)
 
 export type SecurityAuditEventType =
@@ -362,7 +362,7 @@ export function hmacSha256Hex(message: string, secretKey: string): string {
 }
 
 /**
- * 标准 RFC 1321 MD5 算法（专为彩虹易支付 EPAY_COMPAT 协议 32位签名兼容设计，与 PHP md5() 100% 一致）
+ * 标准 RFC 1321 MD5 算法（专为 EPAY_COMPAT 通用协议 32位签名兼容设计，与标准 md5() 100% 一致）
  */
 const MD5_S = [
   7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
@@ -483,7 +483,7 @@ export function computeDoloPaySignature(
 }
 
 /**
- * 开放平台通用字典序签名算法（支持标准 HMAC-SHA256 与彩虹易支付标准 MD5 双模兼容）
+ * 开放平台通用字典序签名算法（支持标准 HMAC-SHA256 与易支付通用协议标准 MD5 双模兼容）
  * 过滤空值与 sign/sign_type 字段，按参数名 ASCII 升序拼接 k1=v1&k2=v2...
  */
 export function computeCanonicalOpenApiSign(
@@ -505,7 +505,7 @@ export function computeCanonicalOpenApiSign(
   const baseQuery = pairs.join('&');
 
   if (mode === 'MD5') {
-    // 彩虹易支付标准 MD5 签名格式：k1=v1&k2=v2... + appSecret
+    // 易支付通用协议标准 MD5 签名格式：k1=v1&k2=v2... + appSecret
     const epayString = `${baseQuery}${appSecret}`;
     return {
       canonicalString: `${baseQuery}&key=${appSecret}`,
@@ -563,7 +563,7 @@ export function maskSensitiveSecret(secret: string): string {
 }
 
 /**
- * 构建向外部业务系统投递的标准异步回调报文（支持 DoloPay REST v1 / 彩虹易支付兼容 MD5 / Stripe 风格 HMAC-SHA256）
+ * 构建向外部业务系统投递的标准异步回调报文（支持 DoloPay REST v1 / 易支付通用协议 MD5 / Stripe 风格 HMAC-SHA256）
  */
 export function buildMerchantWebhookEnvelope(params: {
   order: DoloPayOrder;
@@ -582,7 +582,7 @@ export function buildMerchantWebhookEnvelope(params: {
   const ts = order.paidAt || nowMs;
 
   if (protocol === 'EPAY_COMPAT') {
-    // 彩虹易支付标准回调载荷（采用标准 RFC 1321 MD5 32位签名，无缝对接独角数卡、鲸发卡、WHMCS、V2Board）
+    // 易支付通用协议标准回调载荷（采用标准 RFC 1321 MD5 32位签名，适配常见 EPay 兼容系统）
     const epayParams: Record<string, string | number> = {
       pid: appId,
       trade_no: order.id,

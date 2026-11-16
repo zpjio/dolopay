@@ -409,7 +409,7 @@ export const PROTOCOL_META = {
     desc: '标准 JSON + ASCII 字典序 HMAC-SHA256 签名 + Idempotency-Key 幂等头，适合自研业务系统',
   },
   EPAY_COMPAT: {
-    name: '彩虹易支付兼容协议 (EPay MD5)',
+    name: '易支付通用协议 (EPay Compat · MD5)',
     shortName: '易支付兼容协议 (MD5)',
     desc: '采用标准 RFC 1321 MD5 字典序签名，零代码无缝对接独角数卡、鲸发卡、WHMCS、V2Board 等现成易支付插件',
   },

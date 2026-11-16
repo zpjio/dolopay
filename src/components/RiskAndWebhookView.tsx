@@ -373,8 +373,8 @@ export const RiskAndWebhookView: React.FC<RiskAndWebhookViewProps> = ({
 
   const codeSnippets: Record<CodeLangTab, { title: string; code: string }> = {
     epay: {
-      title: '彩虹易支付兼容协议配置（标准 RFC 1321 MD5 签名 · 零代码对接独角数卡 / 鲸发卡 / V2Board）',
-      code: `# 任何支持【彩虹易支付 / EPay】的开源系统，无需编写任何代码，直接填入以下三项即可完成对接：
+      title: '易支付通用协议配置（EPay Compat · 标准 RFC 1321 MD5 签名 · 零代码对接发卡网 / 面板）',
+      code: `# 任何支持【易支付通用协议 / EPay】的开源系统，无需编写任何代码，直接填入以下三项即可完成对接：
 接口地址 (API URL)   : ${typeof window !== 'undefined' ? window.location.origin : 'https://your-dolopay-host.cn'}/api/v1/epay/
 商户 ID (PID)        : ${selectedSandboxApp?.appId || '10008'}
 商户密钥 (KEY)       : ${selectedSandboxApp?.appSecret || 'epay_compat_key_77291048abcef'}
@@ -732,7 +732,7 @@ function onPaymentNotificationPosted(pkgName, title, text) {
                 01. 多业务系统接入中心 ({connectedApps.length} 个已授权应用)
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                为每个外部系统分配独立的 AppID、签名密钥与回调协议（原生支持 DoloPay REST HMAC-SHA256、彩虹易支付 MD5、Stripe Webhook）
+                为每个外部系统分配独立的 AppID、签名密钥与回调协议（原生支持 DoloPay REST HMAC-SHA256、易支付通用协议 MD5、Stripe Webhook）
               </p>
             </div>
             <Globe className="w-4 h-4 text-slate-400 shrink-0" />
@@ -836,7 +836,7 @@ function onPaymentNotificationPosted(pkgName, title, text) {
                   onChange={(e) => setNewAppProtocol(e.target.value as IntegrationProtocol)}
                   className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-900"
                 >
-                  <option value="EPAY_COMPAT">彩虹易支付兼容协议 (标准 MD5 · 免改码对接发卡/面板)</option>
+                  <option value="EPAY_COMPAT">易支付通用协议 (EPay Compat · 标准 MD5 · 适配发卡/面板)</option>
                   <option value="DOLOPAY_REST_V1">DoloPay REST Open API v1 (标准 HMAC-SHA256)</option>
                   <option value="STRIPE_WEBHOOK">Stripe 风格签名 Webhook (HMAC-SHA256 时间戳签名)</option>
                 </select>
@@ -1052,7 +1052,7 @@ function onPaymentNotificationPosted(pkgName, title, text) {
 
           <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-100 rounded-lg">
             {[
-              { id: 'epay', label: '彩虹易支付免改码配置' },
+              { id: 'epay', label: '易支付通用协议配置' },
               { id: 'nodejs', label: 'Node.js / TS' },
               { id: 'python', label: 'Python' },
               { id: 'java', label: 'Java Spring' },

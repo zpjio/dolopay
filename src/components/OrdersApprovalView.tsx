@@ -417,7 +417,7 @@ export const OrdersApprovalView: React.FC<OrdersApprovalViewProps> = ({
             <div>
               <h2 className="text-base font-bold text-slate-900">多协议回调报文与退避审计</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                根据接入系统协议自动封装 DoloPay REST / 彩虹易支付 / Stripe 签名载荷
+                根据接入系统协议自动封装 DoloPay REST / 易支付通用协议 / Stripe 签名载荷
               </p>
             </div>
             <FileCode2 className="w-4 h-4 text-slate-400" />
