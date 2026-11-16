@@ -245,9 +245,9 @@ npx --yes tsx --test src/core/dolopayEngine.test.ts
 
 ## 六、 开源许可与合规声明 (License & Compliance)
 
-本项目基于 [**Apache-2.0 License**](./LICENSE) 协议开源，请在使用、修改或二次分发时遵守以下条款：
+Copyright © 2026 **zpjio**. 本项目基于 [**Apache-2.0 License**](./LICENSE) 协议开源，请在使用、修改或二次分发时遵守以下条款：
 
-- **许可与署名文件**：根目录提供完整的 [`LICENSE`](./LICENSE) 文本与 [`NOTICE`](./NOTICE) 归属声明文件；所有核心源码文件均标注 `SPDX-License-Identifier: Apache-2.0` 头信息，且 `package.json` 已声明 `"license": "Apache-2.0"`。
+- **许可与署名文件**：根目录提供完整的 [`LICENSE`](./LICENSE) 文本与 [`NOTICE`](./NOTICE) 归属声明文件（版权所有主体：**zpjio**）；所有核心源码文件均标注 `SPDX-License-Identifier: Apache-2.0` 头信息，且 `package.json` 已声明 `"author": "zpjio"` 与 `"license": "Apache-2.0"`。
 - **允许范围**：在保留原始版权声明、[`LICENSE`](./LICENSE) 副本与 [`NOTICE`](./NOTICE) 文件的前提下，允许免费用于个人学习、商业部署、二次开发及闭源衍生分发；若修改了源码文件，需在对应文件中保留明显的修改说明。
 - **第三方依赖**：项目所依赖的开源库（React、Express、Vite、Tailwind CSS、Lucide 等）均遵循各自原有的开源协议（以 MIT / ISC / Apache-2.0 为主）；文中提及的支付宝、微信支付、云闪付、飞书、Bark、Telegram、Stripe 等名称与商标均归其各自权利人所有，仅用于协议互通与通道标识。
 - **免责与合规提示**：本软件按“原样（AS IS）”提供，不附带任何明示或暗示的担保；开发者与部署者须自行确保收款业务符合所在司法辖区法律法规及对应支付渠道服务条款。

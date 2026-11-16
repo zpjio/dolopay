@@ -1,6 +1,7 @@
 {
   "name": "dolopay-gateway",
   "description": "DoloPay (独行付) - Personal QR Code Payment & Multi-Protocol Open Gateway",
+  "author": "zpjio",
   "license": "Apache-2.0",
   "private": true,
   "version": "2.4.0",
