@@ -369,7 +369,7 @@ function resolveTrustedPublicBaseUrl(): string {
 }
 
 function buildOrderApprovalUrl(baseUrl: string, order: DoloPayOrder): string {
-  return `${baseUrl}/?view=approve&orderId=${encodeURIComponent(order.id)}&token=${encodeURIComponent(
+  return `${baseUrl}/approve?orderId=${encodeURIComponent(order.id)}&token=${encodeURIComponent(
     order.approvalToken
   )}`;
 }
@@ -609,7 +609,7 @@ async function startServer() {
     });
   });
 
-  app.get('/api/v1/public/cashier-config', (_req, res) => {
+  app.get(['/api/v1/public/config', '/api/v1/public/cashier-config'], (_req, res) => {
     const qrStatus = buildQrSlotsStatusForClient();
     const enabledChannels = getEnabledChannels();
     const enabledNotifiers: string[] = [];
@@ -1023,7 +1023,7 @@ async function startServer() {
       });
     }
 
-    const { orderId, token, decision } = req.body || {};
+    const { orderId, token, decision, action } = req.body || {};
     const order = serverOrders.find((o) => o.id === String(orderId || '').trim());
     if (!order) {
       return res.status(404).json({ code: 404, msg: '未找到该收款订单' });
@@ -1033,8 +1033,9 @@ async function startServer() {
       return res.status(403).json({ code: 403, msg: '审批签名校验未通过或已过期' });
     }
 
-    if (decision !== 'APPROVE' && decision !== 'REJECT') {
-      return res.status(400).json({ code: 400, msg: 'decision 参数必须为 APPROVE 或 REJECT' });
+    const normalizedDecision = String(decision || action || '').trim().toUpperCase();
+    if (normalizedDecision !== 'APPROVE' && normalizedDecision !== 'REJECT') {
+      return res.status(400).json({ code: 400, msg: 'action/decision 参数必须为 approve 或 reject' });
     }
 
     if (order.status === 'PAID') {
@@ -1045,7 +1046,7 @@ async function startServer() {
       });
     }
 
-    if (decision === 'APPROVE') {
+    if (normalizedDecision === 'APPROVE') {
       const settled = await settleAndApproveOrder({
         order,
         settlementMethod: 'APPROVAL_LINK',
@@ -1436,8 +1437,14 @@ async function startServer() {
   // =========================================================================
   // 6. Admin Authentication & Bootstrap APIs
   // =========================================================================
-  app.get('/api/v1/admin/auth/status', (req, res) => {
+  app.get(['/api/v1/admin/auth-status', '/api/v1/admin/auth/status'], (req, res) => {
     const token = extractAdminToken(req);
+    const hasEnvPwd = Boolean(process.env.DOLOPAY_ADMIN_PASSWORD?.trim());
+    const mode = hasEnvPwd
+      ? 'ENV_PASSWORD'
+      : adminPasswordHash
+      ? 'CLAIMED_HASH'
+      : 'NEEDS_BOOTSTRAP';
     const authenticated =
       Boolean(adminPasswordHash) &&
       verifyAdminSessionToken(token, 'dolopay_admin', sessionSecret, Date.now());
@@ -1447,13 +1454,14 @@ async function startServer() {
     res.json({
       code: 0,
       data: {
+        mode,
         initialized: Boolean(adminPasswordHash),
         authenticated,
       },
     });
   });
 
-  app.post('/api/v1/admin/auth/bootstrap', (req, res) => {
+  app.post(['/api/v1/admin/bootstrap', '/api/v1/admin/auth/bootstrap'], (req, res) => {
     const clientIp = extractClientIp(req);
     if (adminPasswordHash) {
       return res.status(400).json({
@@ -1482,7 +1490,7 @@ async function startServer() {
     });
   });
 
-  app.post('/api/v1/admin/auth/login', (req, res) => {
+  app.post(['/api/v1/admin/login', '/api/v1/admin/auth/login'], (req, res) => {
     const nowMs = Date.now();
     const clientIp = extractClientIp(req);
 
@@ -1640,7 +1648,7 @@ async function startServer() {
   });
 
   // Clear Demo Orders (One-click cleanup for production deployment)
-  app.delete('/api/v1/admin/orders/demo', requireAdminAuth, (_req, res) => {
+  const handleClearDemoOrders = (_req: Request, res: Response) => {
     const before = serverOrders.length;
     serverOrders = serverOrders.filter((o) => !o.isDemo);
     savePersistedState();
@@ -1648,7 +1656,9 @@ async function startServer() {
       code: 0,
       msg: `已清理 ${before - serverOrders.length} 笔演示订单`,
     });
-  });
+  };
+  app.post('/api/v1/admin/orders/clear-demo', requireAdminAuth, handleClearDemoOrders);
+  app.delete('/api/v1/admin/orders/demo', requireAdminAuth, handleClearDemoOrders);
 
   // Upload Personal QR Code Original Image
   app.post('/api/v1/admin/qrcodes/:channel/upload', requireAdminAuth, (req, res) => {
@@ -1728,7 +1738,7 @@ async function startServer() {
   });
 
   // Update QR Slot Metadata (accountMask, paymentTip, enabled)
-  app.patch('/api/v1/admin/qrcodes/:channel', requireAdminAuth, (req, res) => {
+  const handleUpdateQrSlotMeta = (req: Request, res: Response) => {
     const channel = req.params.channel as PaymentChannel;
     if (!['alipay', 'wechat', 'unionpay'].includes(channel)) {
       return res.status(400).json({ code: 400, msg: '无效的收款渠道' });
@@ -1753,7 +1763,9 @@ async function startServer() {
       msg: `${CHANNEL_META[channel].shortName}收款设置已更新`,
       data: buildQrSlotsStatusForClient()[channel],
     });
-  });
+  };
+  app.put('/api/v1/admin/qrcodes/:channel', requireAdminAuth, handleUpdateQrSlotMeta);
+  app.patch('/api/v1/admin/qrcodes/:channel', requireAdminAuth, handleUpdateQrSlotMeta);
 
   // Update Gateway Settings (Email / Feishu / DingTalk / Plugins / Base Config)
   app.put('/api/v1/admin/settings', requireAdminAuth, (req, res) => {
@@ -1871,20 +1883,24 @@ async function startServer() {
   });
 
   // Test Single Notification Channel (Email / Feishu / DingTalk / Bark / Telegram)
-  app.post('/api/v1/admin/notifiers/test', requireAdminAuth, async (req, res) => {
-    const channelId = String(req.body?.channel || 'email') as ApprovalNotifierId;
-    const baseUrl = resolveTrustedPublicBaseUrl();
-    const previewOrder = serverOrders[0];
-    const approvalUrl = previewOrder
-      ? buildOrderApprovalUrl(baseUrl, previewOrder)
-      : `${baseUrl}/?view=approve`;
+  app.post(
+    ['/api/v1/admin/notifications/test', '/api/v1/admin/notifiers/test'],
+    requireAdminAuth,
+    async (req, res) => {
+      const channelId = String(req.body?.channel || 'email') as ApprovalNotifierId;
+      const baseUrl = resolveTrustedPublicBaseUrl();
+      const previewOrder = serverOrders[0];
+      const approvalUrl = previewOrder
+        ? buildOrderApprovalUrl(baseUrl, previewOrder)
+        : `${baseUrl}/approve`;
 
-    const result = await sendSingleTestNotification(channelId, serverSettings, approvalUrl);
-    return res.status(result.ok ? 200 : 400).json({
-      code: result.ok ? 0 : 400,
-      msg: result.message,
-    });
-  });
+      const result = await sendSingleTestNotification(channelId, serverSettings, approvalUrl);
+      return res.status(result.ok ? 200 : 400).json({
+        code: result.ok ? 0 : 400,
+        msg: result.message,
+      });
+    }
+  );
 
   // Connected Apps Management (Core REST + Optional EPay/Stripe)
   app.post('/api/v1/admin/apps', requireAdminAuth, (req, res) => {
