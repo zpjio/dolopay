@@ -2,10 +2,29 @@ node_modules/
 build/
 dist/
 coverage/
+server.js
 .DS_Store
+Thumbs.db
 *.log
 .env*
 !.env.example
 .data/
 .playwright-cli/
 
+# Google AI Studio / IDX / Firebase Studio engineering files
+metadata.json
+.aistudio/
+.idx/
+firebase-applet-config.json
+firebase-blueprint.json
+.gemini/
+
+# Container / non-npm lockfiles
+bun.lock
+bun.lockb
+
+# IDE & editor engineering files
+.vscode/
+.idea/
+*.swp
+*.swo
