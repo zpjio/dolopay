@@ -116,7 +116,23 @@ Available plugin IDs: `unionpay`, `bark`, `telegram`, `epay`, `stripe`, `android
 
 ---
 
-## 6. Tests & License
+## 6. Public Deployment Security Checklist (3 Iron Rules) & Production Hardening
+
+> Following **Kerckhoffs's Principle**, system security relies on keeping your private keys secret rather than hiding the source code. As long as you enforce the following **3 Iron Rules** in public deployment, even an attacker holding the full source code and capturing network traffic cannot forge a single settlement:
+
+1. **Always Serve Behind HTTPS (Caddy / Nginx)**: Never expose port `3000` over plain HTTP. Put DoloPay behind Caddy (auto-TLS) or Nginx + HTTPS so admin credentials, mobile approval links, and merchant callbacks stay encrypted.
+2. **Pin `PUBLIC_BASE_URL` and `DOLOPAY_ADMIN_PASSWORD` in `.env`**: Explicitly set `PUBLIC_BASE_URL=https://pay.yourdomain.com` to prevent Host Header Poisoning on outbound approval links, and set a strong `DOLOPAY_ADMIN_PASSWORD` (plus `DOLOPAY_SESSION_SECRET` and `DOLOPAY_APPROVAL_SECRET`) before first boot.
+3. **Protect & Back Up `.env` and `.data/`**: Never commit `.env` or `.data/` (already in `.gitignore`), restrict permissions (`chmod 700 .data`), and back up `.data/` daily.
+
+### Built-In Defense-in-Depth Safeguards
+- **Auth & Sessions**: `scrypt` salted password hashing + constant-time verification; admin tokens stay in React memory (never persisted to `localStorage`); login and approval endpoints enforce IP sliding-window rate limits.
+- **Two-Step Anti-Prefetch Approval**: Mobile approval links use read-only `GET /api/v1/approve/inspect` followed by explicit `POST /api/v1/approve/decide` with embedded token expiry checks, preventing mail/IM link scanners from auto-settling orders.
+- **Anti-Spam & Anti-SSRF**: Buyer payment notifications enforce a 60s per-order cooldown (max 3 pushes); all outbound webhooks block private/loopback/metadata IPv4, IPv6 literals, embedded credentials, and HTTP 30x redirects (`redirect: 'error'`); `returnUrl` strictly enforces `http://` or `https://`.
+- **Upload & Export Hygiene**: QR uploads verify both MIME and binary magic bytes (PNG/JPEG/WebP ≤ 2MB) within confined directories; CSV ledger exports neutralize spreadsheet formula injection characters (`=`, `+`, `-`, `@`).
+
+---
+
+## 7. Tests & License
 
 ```bash
 npx --yes tsx --test src/core/dolopayEngine.test.ts

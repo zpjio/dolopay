@@ -250,15 +250,60 @@ DOLOPAY_DISABLED_PLUGINS=stripe,bark,telegram
 
 ---
 
-## 六、 内置安全防护设计
+## 六、 给个人开发者的公网部署安全清单（3 条铁律）
 
-- **身份与令牌安全**：管理员口令采用 `scrypt` 随机加盐哈希 + 常数时间比对；会话令牌保存在内存状态不落盘 `localStorage`；手机审批令牌自带签发与过期时间戳校验。
-- **对外回调与链接安全**：所有出站 Webhook 强制拦截私网/环回/保留 IPv4、IPv6 字面量并禁用 30x 自动重定向（防 SSRF）；审批链接仅采信 `PUBLIC_BASE_URL` 或管理员已认证站点 Origin（防 Host Header Poisoning）；`returnUrl` 强制限制 `http://`/`https://` 协议。
-- **文件与导出安全**：二维码上传同时校验扩展名与二进制文件头魔数（PNG/JPEG/WebP ≤ 2MB）并限制在安全目录内；账本 CSV 导出自动中和公式注入字符。
+> 遵循**柯克霍夫原则（Kerckhoffs's Principle）**，系统的安全性建立在私有密钥之上而非源码保密。只要在公网部署时落实以下 **3 条铁律**，即便攻击者拿着完整源码抓包分析，也无法伪造任何一笔核销：
+
+1. **铁律一：公网必须开启 HTTPS（禁止明文 HTTP 暴露后台与审批页）**  
+   务必在 DoloPay（`127.0.0.1:3000`）前端套一层 **Caddy**（自动申请免费 Let's Encrypt 证书）或 **Nginx + HTTPS**，保护管理员口令、手机端审批签名链接和下游回调载荷在公网传输不被窃听或劫持。
+2. **铁律二：启动前在 `.env` 固定 `PUBLIC_BASE_URL` 与强口令 `DOLOPAY_ADMIN_PASSWORD`**  
+   - 显式设置 `PUBLIC_BASE_URL=https://pay.yourdomain.com`，彻底锁死发往邮件/飞书/钉钉的审批确认页域名，杜绝外部伪造 `Host` / `X-Forwarded-Host` 请求头风险；
+   - 提前设置 ≥ 12 位随机强口令 `DOLOPAY_ADMIN_PASSWORD`（以及固定的 `DOLOPAY_SESSION_SECRET` / `DOLOPAY_APPROVAL_SECRET`），避免公网首次启动窗口被陌生人抢先初始化后台密码。
+3. **铁律三：严禁泄漏 `.env` 与 `.data/`，并妥善做好本地数据备份**  
+   `.env` 包含 SMTP 授权码与机器人密钥，`.data/dolopay-state.json` 与 `.data/qrcodes/` 保存订单流水与收款码原图——两者均已在 `.gitignore` 中排除，切勿提交到公开仓库；建议通过定时任务每日备份 `.data/` 目录，并确保目录权限为仅当前运行用户可读写（`chmod 700 .data`）。
 
 ---
 
-## 七、 常用运维与测试命令
+## 七、 生产环境纵深安全防线与部署建议
+
+### 1. 内置纵深安全机制（已代码级落地）
+
+| 防线层级 | 防护机制与实现细节 |
+| :--- | :--- |
+| **身份认证与会话** | 管理员口令采用 `scrypt` 随机 16 字节盐哈希 + `crypto.timingSafeEqual` 常数时间比对；会话 Token 仅存放在前端 React 内存中（不写入 `localStorage`），防范持久化 XSS 窃取凭证；登录接口内置 IP 滑窗限流。 |
+| **手机端两步审批防误触** | 邮件/飞书/钉钉通知链接指向 `/approve?orderId=...&token=...`，采用 **`GET /api/v1/approve/inspect`（纯只读验签）+ `POST /api/v1/approve/decide`（人工点击确认）** 两步设计，防止邮箱或聊天客户端自动预加载 URL 造成误核销；审批 Token 内嵌过期时间戳并强制校验。 |
+| **防 Host 污染与反刷通知** | 生成发往站长手机的审批链接绝不采信未认证买家请求头；买家点击「我已支付」受 **IP 限流 + 60 秒单订单冷却 + 单笔上限 3 次推送** 三重限制，且自动拒绝已超时订单。 |
+| **防 SSRF 与伪协议 XSS** | 所有出站 Webhook（下游 `notifyUrl`、飞书/钉钉/Bark）强制拦截 `localhost`、私网/环回/云元数据 IPv4（`169.254.169.254` 等）、IPv6 字面量与内嵌凭据 URL，并在 `fetch` 中启用 `redirect: 'error'` 阻断 30x 跳转探测；`returnUrl` 前后端双重校验仅允许 `http://` / `https://`。 |
+| **文件上传与导出安全** | 收款码原图上传同时校验 MIME、≤ 2MB 体积与二进制文件头魔数（PNG / JPEG / WebP），文件写入严格限制在 `.data/qrcodes/` 目录内（防路径穿越）；订单账本 CSV 导出自动对 `=`、`+`、`-`、`@` 等公式触发前缀转义，防范表格公式注入。 |
+| **可选插件隔离与防重放** | 易支付兼容与安卓监听接口默认关闭（未启用直接返回 `403`）；安卓监听强制 `HMAC-SHA256` + ±300 秒防重放窗口 + 设备流水号幂等去重；可通过 `DOLOPAY_DISABLED_PLUGINS` 在部署层彻底锁定屏蔽不需要的扩展。 |
+
+### 2. 推荐生产部署拓扑（Caddy 反向代理 + PM2 保活）
+
+**① Caddy 极简 HTTPS 配置（`/etc/caddy/Caddyfile`，自动签发续期 TLS 证书）：**
+
+```caddyfile
+pay.yourdomain.com {
+    reverse_proxy 127.0.0.1:3000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+```
+
+**② PM2 守护进程启动（开机自启与异常自动拉起）：**
+
+```bash
+npm run build
+NODE_ENV=production pm2 start "npm start" --name dolopay
+pm2 save && pm2 startup
+```
+
+> **进阶建议**：如同时启用「易支付兼容」或自有网站 API，请在云防火墙仅放行 `80/443` 端口，不要直接将 `3000` 端口暴露在公网；对于飞书和钉钉群机器人，强烈建议开启官方「签名校验 / 加签（`SEC...`）」。
+
+---
+
+## 八、 常用运维与测试命令
 
 ```bash
 # 运行核心引擎、插件机制与安全校验单元测试
@@ -271,6 +316,6 @@ npm run build
 
 ---
 
-## 八、 开源许可 (License)
+## 九、 开源许可 (License)
 
 Copyright © 2026 **zpjio**. 本项目基于 [**Apache-2.0 License**](./LICENSE) 开源（归属声明见 [`NOTICE`](./NOTICE)）。本软件按“原样（AS IS）”提供，部署者须自行确保业务符合当地法律法规及对应支付平台条款。

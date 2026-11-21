@@ -600,7 +600,7 @@ export const CashierView: React.FC<CashierViewProps> = ({
                         ) : (
                           <Send className="w-4 h-4" />
                         )}
-                        我已支付，通知站长核销
+                        我已支付
                       </button>
                       <button
                         type="button"
